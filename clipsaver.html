@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Najpopularniejsze Klipy z Twitcha - Polska</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #6441a5;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        main {
+            padding: 20px;
+        }
+        .clip {
+            background-color: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .clip img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+        .clip h3 {
+            margin: 10px 0;
+        }
+        .clip p {
+            margin: 5px 0;
+        }
+        .clip a {
+            color: #6441a5;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .clip a:hover {
+            text-decoration: underline;
+        }
+        .loading {
+            text-align: center;
+            font-size: 20px;
+            color: #6441a5;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Najpopularniejsze Klipy Twitcha - Polska</h1>
+    </header>
+    
+    <main>
+        <div class="loading">Ładowanie klipów...</div>
+        <div id="clips-container"></div>
+    </main>
+
+    <script>
+        const clientId = 'TWOJ_CLIENT_ID'; // Zastąp swoim Client ID
+        const clientSecret = 'TWOJ_CLIENT_SECRET'; // Zastąp swoim Client Secret
+        const clipsContainer = document.getElementById('clips-container');
+        const loadingMessage = document.querySelector('.loading');
+
+        async function getOAuthToken() {
+            const response = await fetch(`https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            return data.access_token;
+        }
+
+        async function getClips() {
+            const oauthToken = await getOAuthToken();
+
+            const url = `https://api.twitch.tv/helix/clips?started_at=${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()}`;
+            const response = await fetch(url, {
+                headers: {
+                    'Client-ID': clientId,
+                    'Authorization': `Bearer ${oauthToken}`
+                }
+            });
+
+            const data = await response.json();
+            return data.data;
+        }
+
+        async function loadClips() {
+            const clips = await getClips();
+            const filteredClips = clips.filter(clip => clip.language === 'pl'); // Filtrujemy tylko polskie klipy
+
+            if (filteredClips.length === 0) {
+                clipsContainer.innerHTML = '<p>Brak klipów w języku polskim.</p>';
+            } else {
+                loadingMessage.style.display = 'none'; // Ukrywamy komunikat "Ładowanie"
+                filteredClips.sort((a, b) => b.view_count - a.view_count); // Sortujemy według liczby wyświetleń
+
+                filteredClips.forEach(clip => {
+                    const clipElement = document.createElement('div');
+                    clipElement.classList.add('clip');
+                    clipElement.innerHTML = `
+                        <h3>${clip.title}</h3>
+                        <p><strong>Wyświetlenia:</strong> ${clip.view_count}</p>
+                        <a href="${clip.url}" target="_blank">Zobacz klip</a>
+                    `;
+                    clipsContainer.appendChild(clipElement);
+                });
+            }
+        }
+
+        loadClips();
+    </script>
+</body>
+</html>
